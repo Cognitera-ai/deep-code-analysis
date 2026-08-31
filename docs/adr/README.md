@@ -22,6 +22,7 @@ it, the decision itself, its consequences, and the alternatives rejected.
 | [0016](0016-english-throughout.md) | English throughout | Supersedes an earlier Spanish/English split |
 | [0017](0017-private-until-ready.md) | ~~Private until ready~~ | **Superseded by 0018.** Its argument is why the parity suite exists |
 | [0018](0018-public-repository.md) | The repository is public | Renamed to `deep-code-analysis`; the obligations of being public are now live |
+| [0019](0019-coloured-output-and-a-narrow-tui.md) | Colour everywhere, TUI for one question | Divergence is visual; a general TUI is maintenance for a workflow files serve better |
 
 ## Format
 

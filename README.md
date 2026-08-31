@@ -123,11 +123,22 @@ pip install "deep-code-analysis[pylint]"       # pylint score, subprocess only (
 ### Command line
 
 ```bash
-dca analyse src/ --out results/ --format parquet --summary
+dca analyse src/ --summary               # coloured overview + where engines disagreed
+dca analyse src/ --out results/ --format parquet
+dca explore src/                         # interactive: browse the disagreements
 dca history . --trend lloc__radon        # how the project grew, revision by revision
 dca catalogue                            # every column: engine, unit, range, meaning
 dca doctor                               # why is this column empty?
 ```
+
+`dca explore` opens an interactive view: fragments on the left, their engine disagreements
+on the right, filtered to disagreements by default and colour-coded by how far apart the
+engines are. Magenta means one engine reports the quantity absent while another reports it
+present — the strongest disagreement there is, and the one no ratio can express.
+
+Colour works out of the box. Only `dca explore` needs the `tui` extra, and without it every
+command still prints the same facts in plain text — a measurement tool should not refuse to
+run because a presentation library is missing.
 
 ---
 
@@ -254,7 +265,7 @@ part.
 
 Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Every decision in this project is written down and argued in [`docs/adr/`](docs/adr/) — 17
+Every decision in this project is written down and argued in [`docs/adr/`](docs/adr/) — 18
 records, including the ones that were **reversed** and why. If you disagree with one, the
 reasoning is there to argue against rather than reverse-engineer.
 

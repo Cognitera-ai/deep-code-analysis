@@ -56,11 +56,20 @@ def test_analyse_writes_tables(tmp_path, corpus):
 
 
 def test_analyse_reads_a_directory(tmp_path, corpus, capsys):
+    """Without --out, stdout is a readable overview rather than the whole frame.
+
+    Dumping 138 columns to a terminal produced something nobody could read and no tool
+    could consume. The overview names each fragment and points at --out for the rest, so
+    that is what this asserts (ADR-0019).
+    """
     for name in ("a", "b"):
         (tmp_path / f"{name}.py").write_text(corpus["mi_informative"], encoding="utf-8")
 
     assert main(["analyse", str(tmp_path), "--engines", "radon"]) == 0
-    assert "lloc__radon" in capsys.readouterr().out
+    out = capsys.readouterr().out
+
+    assert "a.py" in out and "b.py" in out
+    assert "--out" in out, "the overview must say where the full data goes"
 
 
 def test_unknown_engine_exits_with_an_error(tmp_path, capsys):

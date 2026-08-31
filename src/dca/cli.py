@@ -50,8 +50,21 @@ def _cmd_analyse(args: argparse.Namespace) -> int:
         for name, path in written.items():
             print(f"{name:14s} {path}")
     else:
+        from . import console as ui
+
         metrics = frame.metrics()
-        with_pandas_width(metrics)
+        divergent_cols = [c for c in metrics.columns if c.endswith("__divergent")]
+        rows = [
+            {
+                "fragment": str(row["fragment_id"]),
+                "valid": bool(row.get("is_valid_python")),
+                "lloc": row.get("lloc__radon"),
+                "cc": row.get("cyclomatic_complexity_mean__radon"),
+                "divergent": sum(1 for c in divergent_cols if row.get(c) is True),
+            }
+            for _, row in metrics.iterrows()
+        ]
+        ui.print_overview(rows, len(metrics.columns) - 4)
 
     degradations = frame.degradations()
     if not degradations.empty:
@@ -60,10 +73,11 @@ def _cmd_analyse(args: argparse.Namespace) -> int:
             print(f"  {row['engine']}: {row['detail']}", file=sys.stderr)
 
     if args.summary:
+        from . import console as ui
+
         summary = frame.divergence_summary()
         if not summary.empty:
-            print("\nDivergence between engines:")
-            print(summary.to_string(index=False))
+            ui.print_divergence(summary.to_dict("records"))
     return 0
 
 
@@ -129,15 +143,30 @@ def _cmd_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_explore(args: argparse.Namespace) -> int:
+    """Open the interactive divergence explorer."""
+    from .tui import TuiUnavailableError, explore_paths
+
+    try:
+        explore_paths(args.paths, engines=args.engines)
+    except TuiUnavailableError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except FileNotFoundError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     """Report engine availability. Exits non-zero if a default engine is missing."""
+    from . import console as ui
+
     adapters = build_adapters(None, include_optional=True)
     missing_default = False
     default_names = {a.name for a in build_adapters(None)}
 
-    print(f"dca {__version__}\n")
-    print(f"{'engine':<12} {'path':<11} {'status':<14} version")
-    print("-" * 56)
+    rows = []
     for adapter in adapters:
         available = adapter.is_available()
         optional = adapter.name not in default_names
@@ -148,12 +177,18 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
         else:
             status = "MISSING"
             missing_default = True
-        version = adapter.version or "-"
-        print(f"{adapter.name:<12} {adapter.path:<11} {status:<14} {version}")
+        rows.append(
+            {
+                "name": adapter.name,
+                "path": adapter.path,
+                "status": status,
+                "version": adapter.version or "-",
+            }
+        )
 
     from . import embeddings
 
-    print(f"\nembeddings extra: {'available' if embeddings.is_available() else 'not installed'}")
+    ui.print_doctor(rows, __version__, embeddings.is_available())
 
     if missing_default:
         print(
@@ -210,6 +245,13 @@ def build_parser() -> argparse.ArgumentParser:
     history.add_argument("--format", choices=["csv", "parquet"], default="csv")
     history.add_argument("--out", help="directory to write into")
     history.set_defaults(func=_cmd_history)
+
+    explore = subparsers.add_parser(
+        "explore", help="interactively browse where the engines disagree (needs the tui extra)"
+    )
+    explore.add_argument("paths", nargs="+", help="files or directories to analyse")
+    explore.add_argument("--engines", nargs="+", help="restrict to these engines")
+    explore.set_defaults(func=_cmd_explore)
 
     doctor = subparsers.add_parser("doctor", help="report which engines are available")
     doctor.set_defaults(func=_cmd_doctor)

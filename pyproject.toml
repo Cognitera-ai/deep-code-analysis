@@ -30,6 +30,9 @@ dependencies = [
     # string from a null, nor an int column with nulls from a float one, and both
     # distinctions carry meaning in this schema.
     "pyarrow>=17.0.0",
+    # Declared explicitly although complexipy already pulls it in: relying on a transitive
+    # dependency is a latent break waiting for that package to drop it.
+    "rich>=13.0",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +44,10 @@ pylint = ["pylint>=3.0"]
 prospector = ["prospector>=1.10"]
 # Oracles used only to characterise divergence, never to certify correctness (ADR-0010).
 conformance = ["cognitive_complexity>=1.3.0"]
+# The interactive divergence explorer. Optional because a library should not force a full
+# TUI framework on people who only want the numbers. Coloured output needs no extra —
+# rich is a direct dependency.
+tui = ["textual>=0.80"]
 # So that the CONTRIBUTING instruction `pip install -e ".[dev]"` works for people who do
 # not use uv.
 dev = ["pytest>=8.0.0", "ruff>=0.7.0"]
@@ -64,6 +71,7 @@ dev-dependencies = [
     "bandit>=1.9.4",
     "pyscn>=1.30.0",
     "pytest>=8.0.0",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.7.0",
     "vulture>=2.16",
 ]
@@ -92,6 +100,8 @@ select = ["E", "F", "I", "N", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The TUI is driven through Textual's async pilot.
+asyncio_mode = "auto"
 markers = [
     "needs_subprocess_engine: requires an external binary (pyscn/vulture/bandit) to be installed",
     "needs_embeddings: requires the 'embeddings' extra",
