@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras --dev
+      - name: ruff
+        run: uv run ruff check src tests
+
+  licence:
+    # ADR-0003 forbids copyleft in the import tree. This is a separate job rather than
+    # part of the test suite so that a licence violation is visible in the checks list
+    # without reading a test log — it is the one failure that cannot be worked around.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: no copyleft on the import path
+        run: uv run pytest tests/test_licence.py -v
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: install subprocess engines
+        # Deliberately installed as tools, not as dependencies: they are reached across a
+        # process boundary and must never enter the import tree.
+        run: uv tool install pyscn && uv tool install vulture && uv tool install bandit
+      - run: uv sync --python ${{ matrix.python-version }} --dev
+      - name: engines are discoverable
+        run: uv run dca doctor
+      - name: unit and conformance tests
+        run: uv run pytest tests/ -q
+
+  degrades-without-engines:
+    # The other half of the availability contract: with no subprocess engine installed at
+    # all, the package must still analyse and simply emit null columns. A crash here would
+    # mean an optional engine had quietly become mandatory.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --dev
+      - name: analysis still works with import-path engines only
+        run: |
+          uv run python -c "
+          from dca import analyse
+          r = analyse('def f(a, b):\n    return a + b if a > b else b\n')
+          assert r.value('halstead_volume', 'radon') is not None, 'radon must always work'
+          assert r.value('lcom_mean', 'pyscn') is None, 'absent engine must yield null'
+          print('degraded cleanly')
+          "
+      - name: doctor reports the missing engines
+        run: uv run dca doctor || echo "doctor exits non-zero when a default engine is missing, as designed"
+
+  catalogue:
+    # R-16: the committed catalogue is generated from the adapters, so it cannot drift.
+    # An out-of-date catalogue is a build failure, not a chore.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --dev
+      - name: catalogue is current
+        run: |
+          uv run dca catalogue --write docs/metric-catalogue.md
+          git diff --exit-code docs/metric-catalogue.md \
+            || (echo "::error::docs/metric-catalogue.md is stale. Run: dca catalogue --write docs/metric-catalogue.md" && exit 1)

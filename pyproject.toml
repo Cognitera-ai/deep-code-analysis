@@ -1,0 +1,93 @@
+[project]
+name = "deep-code-analysis"
+version = "0.1.0"
+description = "Structural measurement of LLM-generated Python code, with verifiable provenance and engine divergence characterised rather than hidden"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Yonathan Berith Jaramillo Ramírez" }]
+maintainers = [{ name = "Yonathan Berith Jaramillo Ramírez" }]
+requires-python = ">=3.11"
+keywords = ["static-analysis", "code-metrics", "halstead", "provenance", "llm", "reproducibility"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+# Import-path dependencies. All permissive (MIT / PSF) — ADR-0003 forbids copyleft here.
+# Exact pins: the conformance suite is not deterministic under version ranges (ADR-0010).
+dependencies = [
+    "radon==6.0.1",
+    "lizard>=1.24.0,<2",     # >=1.24 specifically: the Halstead extension does not exist in 1.23 (R-23)
+    "complexipy>=7.0.1,<8",
+    "pandas>=2.2.0",
+    "numpy>=2.0.0",
+    # Parquet is the authoritative output format (R-18): CSV cannot distinguish an empty
+    # string from a null, nor an int column with nulls from a float one, and both
+    # distinctions carry meaning in this schema.
+    "pyarrow>=17.0.0",
+]
+
+[project.optional-dependencies]
+# Heavy: torch alone is larger than everything else combined. Never a hard dependency (ADR-0009).
+embeddings = ["torch>=2.2.0", "transformers>=4.44.0"]
+# Subprocess-only. pylint is GPLv2+, so it must never enter the import tree (ADR-0011).
+pylint = ["pylint>=3.0"]
+# Oracles used only to characterise divergence, never to certify correctness (ADR-0010).
+conformance = ["cognitive_complexity>=1.3.0"]
+
+[project.scripts]
+dca = "dca.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Cognitera-ai/deep-code-analysis"
+Documentation = "https://github.com/Cognitera-ai/deep-code-analysis/tree/main/docs"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dca"]
+
+[tool.uv]
+dev-dependencies = [
+    "bandit>=1.9.4",
+    "pyscn>=1.30.0",
+    "pytest>=8.0.0",
+    "ruff>=0.7.0",
+    "vulture>=2.16",
+]
+
+# torch from the CPU wheel index: the CUDA build is multiple gigabytes and these
+# encoders run fine on CPU (ADR-0009).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+# The conformance corpus is fixture data, not code. Its fragments are deliberately
+# pathological — one is 200 levels of nested literal, another never terminates — and
+# linting them would be linting the thing under test.
+extend-exclude = ["tests/conformance/corpus"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "needs_subprocess_engine: requires an external binary (pyscn/vulture/bandit) to be installed",
+    "needs_embeddings: requires the 'embeddings' extra",
+]

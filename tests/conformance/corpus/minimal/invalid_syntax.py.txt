@@ -1,0 +1,8 @@
+# Not valid Python, and named .txt so no tool tries to import it.
+#
+# Pins R-06: every metric is null, the row is still emitted, and is_valid_python is False.
+# The row is kept rather than dropped so the metrics table stays aligned row-for-row with
+# any other table keyed by fragment id. Filtering belongs at analysis time, not capture
+# time.
+def broken(
+    print("missing the closing parenthesis"
