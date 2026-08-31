@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+      - name: install subprocess engines
+        run: uv tool install pyscn && uv tool install vulture && uv tool install bandit
+      - run: uv sync --dev
+      - name: the suite must pass before anything is published
+        env:
+          DCA_PARITY_SAMPLE: "40"
+          DCA_PARITY_SUBPROCESS_SAMPLE: "6"
+        run: uv run pytest tests/ -q
+      - run: uv build
+      - name: the built wheel must actually install and work
+        # Building is not evidence. This installs the artifact into a clean environment
+        # and runs it, which is the only check that catches a packaging mistake — a
+        # missing module, a broken entry point, a dependency declared in the wrong place.
+        run: |
+          uv venv /tmp/verify
+          uv pip install --python /tmp/verify/bin/python dist/*.whl
+          /tmp/verify/bin/python -c "
+          import dca
+          result = dca.analyse('def f(a, b):\n    return a + b if a > b else b\n')
+          assert result.value('halstead_volume', 'radon') is not None
+          assert result.provenance.analysis_chain['radon']
+          print('installed wheel works:', dca.__version__)
+          "
+          /tmp/verify/bin/dca --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      # Trusted Publishing: PyPI verifies this workflow's identity through OIDC, so there
+      # is no API token to store, rotate, or leak. Configured once at
+      # https://pypi.org/manage/account/publishing/
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" dist/* \
+            --title "${{ github.ref_name }}" \
+            --notes-file CHANGELOG.md

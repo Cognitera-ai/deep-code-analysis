@@ -1,7 +1,7 @@
 [project]
 name = "deep-code-analysis"
 version = "0.1.0"
-description = "Structural measurement of LLM-generated Python code, with verifiable provenance and engine divergence characterised rather than hidden"
+description = "Reproducible static analysis for Python: 9 engines, one schema, provenance attached to every measurement"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Yonathan Berith Jaramillo Ramírez" }]
@@ -41,6 +41,9 @@ pylint = ["pylint>=3.0"]
 prospector = ["prospector>=1.10"]
 # Oracles used only to characterise divergence, never to certify correctness (ADR-0010).
 conformance = ["cognitive_complexity>=1.3.0"]
+# So that the CONTRIBUTING instruction `pip install -e ".[dev]"` works for people who do
+# not use uv.
+dev = ["pytest>=8.0.0", "ruff>=0.7.0"]
 
 [project.scripts]
 dca = "dca.cli:main"
