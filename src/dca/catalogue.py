@@ -66,12 +66,13 @@ def generate(adapters: Sequence[Adapter]) -> str:
 
     for adapter in adapters:
         specs = adapter.declared_metrics
-        version = adapter.version or "not installed"
         lines.append(f"\n## `{adapter.name}`\n")
-        lines.append(
-            f"Integration: **{adapter.path}**. Version observed when this catalogue was "
-            f"generated: `{version}`.\n"
-        )
+        # Deliberately no version here. The catalogue describes the *schema*, which is the
+        # same everywhere; engine versions are environment-specific and belong in the
+        # per-run provenance envelope. Embedding them made this document regenerate
+        # differently on every interpreter, so the drift check failed on Python 3.11 and
+        # 3.13 while passing on 3.12 — a document that cannot be stable cannot be checked.
+        lines.append(f"Integration: **{adapter.path}**.\n")
         lines.append("| Column | Granularity | Unit | Type | Range | Null means | Description |")
         lines.append("|---|---|---|---|---|---|---|")
         for spec in specs:

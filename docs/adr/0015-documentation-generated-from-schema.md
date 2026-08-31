@@ -26,6 +26,12 @@ granularity, unit and description as part of the contract
 ## Consequences
 
 - The catalogue cannot lie.
+- **It contains only environment-independent facts.** Engine versions are deliberately
+  excluded: they differ per machine, so including them made the document regenerate
+  differently on every interpreter and the drift check fail for a reason that had nothing
+  to do with the schema. Versions belong in the per-run provenance envelope
+  ([ADR-0007](0007-provenance-is-mandatory.md)), where they are a measurement rather than
+  a constant.
 - Adding a metric without describing it becomes an error rather than an oversight.
 - It is also exactly what artifact review guidelines look for: complete, verifiable API
   documentation.

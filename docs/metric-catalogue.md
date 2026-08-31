@@ -16,7 +16,7 @@ Identity columns: `fragment_id`, `code_sha256`, `is_valid_python`, `language`.
 
 ## `radon`
 
-Integration: **import**. Version observed when this catalogue was generated: `6.0.1`.
+Integration: **import**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -49,7 +49,7 @@ Integration: **import**. Version observed when this catalogue was generated: `6.
 
 ## `lizard`
 
-Integration: **import**. Version observed when this catalogue was generated: `1.24.0`.
+Integration: **import**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -77,7 +77,7 @@ Integration: **import**. Version observed when this catalogue was generated: `1.
 
 ## `ast`
 
-Integration: **import**. Version observed when this catalogue was generated: `3.12.3`.
+Integration: **import**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -98,7 +98,7 @@ Integration: **import**. Version observed when this catalogue was generated: `3.
 
 ## `complexipy`
 
-Integration: **import**. Version observed when this catalogue was generated: `7.0.1`.
+Integration: **import**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -109,7 +109,7 @@ Integration: **import**. Version observed when this catalogue was generated: `7.
 
 ## `pyscn`
 
-Integration: **subprocess**. Version observed when this catalogue was generated: `1.30.0`.
+Integration: **subprocess**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -133,7 +133,7 @@ Integration: **subprocess**. Version observed when this catalogue was generated:
 
 ## `vulture`
 
-Integration: **subprocess**. Version observed when this catalogue was generated: `2.16`.
+Integration: **subprocess**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -143,7 +143,7 @@ Integration: **subprocess**. Version observed when this catalogue was generated:
 
 ## `bandit`
 
-Integration: **subprocess**. Version observed when this catalogue was generated: `1.9.4`.
+Integration: **subprocess**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|
@@ -157,7 +157,7 @@ Integration: **subprocess**. Version observed when this catalogue was generated:
 
 ## `pylint`
 
-Integration: **subprocess**. Version observed when this catalogue was generated: `not installed`.
+Integration: **subprocess**.
 
 | Column | Granularity | Unit | Type | Range | Null means | Description |
 |---|---|---|---|---|---|---|

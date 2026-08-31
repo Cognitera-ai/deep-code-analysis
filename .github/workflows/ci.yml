@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"   # Mondays: the deep parity sweep
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -56,6 +58,12 @@ jobs:
       - name: engines are discoverable
         run: uv run dca doctor
       - name: unit and conformance tests
+        # A smaller parity sample keeps the matrix quick. The full sweep runs on a
+        # schedule, not on every push: 120 files across three interpreters was 45 minutes
+        # of runner time to re-prove something one interpreter already proved.
+        env:
+          DCA_PARITY_SAMPLE: "40"
+          DCA_PARITY_SUBPROCESS_SAMPLE: "6"
         run: uv run pytest tests/ -q
 
   degrades-without-engines:
@@ -92,3 +100,19 @@ jobs:
           uv run dca catalogue --write docs/metric-catalogue.md
           git diff --exit-code docs/metric-catalogue.md \
             || (echo "::error::docs/metric-catalogue.md is stale. Run: dca catalogue --write docs/metric-catalogue.md" && exit 1)
+
+  parity-deep:
+    # The wide parity sweep: hundreds of real files against every engine's own CLI. Too
+    # slow for every push, too valuable to run only by hand.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv tool install pyscn && uv tool install vulture && uv tool install bandit
+      - run: uv sync --dev
+      - name: deep parity sweep
+        env:
+          DCA_PARITY_SAMPLE: "600"
+          DCA_PARITY_SUBPROCESS_SAMPLE: "40"
+        run: uv run pytest tests/conformance/test_engine_parity.py -q
