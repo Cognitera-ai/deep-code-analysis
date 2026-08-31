@@ -1,0 +1,10 @@
+files measured             : 1500
+radon halstead volume == 0 : 297 (19.80%)
+radon MI == 100.0 exactly  : 303 (20.20%)
+
+of the zero-volume files:
+  median real operational AST nodes : 14
+  genuinely operator-free           : 6.73%
+
+lizard/radon Halstead volume ratio (n=1155):
+  min 0.15x | p25 7.47x | MEDIAN 14.17x | p75 32.38x | max 5419.30x
