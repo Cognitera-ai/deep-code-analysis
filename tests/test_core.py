@@ -42,13 +42,25 @@ def test_schema_is_stable_when_an_engine_is_absent(mi_informative):
 
 
 def test_unavailable_engine_produces_nulls_not_a_crash(mi_informative):
-    """Contract rule 4. pylint is not installed in the default environment, and asking for
-    it must yield null columns rather than an error."""
-    result = Analyser(engines=["pylint"]).analyse(mi_informative)
+    """Contract rule 4: an engine that cannot run yields null columns, not an error.
 
-    assert all(
-        v is None for k, v in result.metrics.items() if k.endswith("__pylint")
-    )
+    Availability is forced rather than inferred from what happens to be installed. An
+    earlier version of this test asked for pylint on the assumption it was absent, and
+    started failing the moment prospector was added — because prospector depends on
+    pylint. A test whose premise is "this thing is not installed" is a test that breaks
+    for reasons unrelated to what it checks.
+    """
+    from dca.adapters.radon_adapter import RadonAdapter
+
+    class NeverAvailable(RadonAdapter):
+        def is_available(self) -> bool:
+            return False
+
+    result = Analyser(adapters=[NeverAvailable()]).analyse(mi_informative)
+
+    assert result.metrics, "the schema must still have the engine's columns"
+    assert all(v is None for v in result.metrics.values())
+    # Unavailable is a configuration state, not a fault: nothing to report.
     assert not result.degradations
 
 

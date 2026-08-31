@@ -88,6 +88,47 @@ def _cmd_catalogue(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_history(args: argparse.Namespace) -> int:
+    """Measure a repository across its git history."""
+    from .history import GitUnavailableError, measure, trend
+
+    try:
+        frame = measure(
+            args.repo,
+            branch=args.branch,
+            limit=args.limit,
+            every=args.every,
+            engines=args.engines,
+            max_files_per_revision=args.max_files,
+        )
+    except GitUnavailableError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if frame.empty:
+        print("no measurable Python found in that history", file=sys.stderr)
+        return 1
+
+    if args.out:
+        out = Path(args.out)
+        out.mkdir(parents=True, exist_ok=True)
+        path = out / ("dca_history.parquet" if args.format == "parquet" else "dca_history.csv")
+        if args.format == "parquet":
+            frame.to_parquet(path, index=False)
+        else:
+            frame.to_csv(path, index=False)
+        print(f"{len(frame)} rows -> {path}")
+    elif args.trend:
+        series = trend(frame, args.trend, how=args.how)
+        if series.empty:
+            print(f"error: no column named {args.trend!r}", file=sys.stderr)
+            return 2
+        with_pandas_width(series)
+    else:
+        with_pandas_width(frame.head(50))
+    return 0
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     """Report engine availability. Exits non-zero if a default engine is missing."""
     adapters = build_adapters(None, include_optional=True)
@@ -152,6 +193,23 @@ def build_parser() -> argparse.ArgumentParser:
     catalogue.add_argument("--engines", nargs="+", help="restrict to these engines")
     catalogue.add_argument("--write", help="write to this path instead of stdout")
     catalogue.set_defaults(func=_cmd_catalogue)
+
+    history = subparsers.add_parser(
+        "history", help="measure a repository across its git history"
+    )
+    history.add_argument("repo", help="path to a git repository")
+    history.add_argument("--branch", default="HEAD")
+    history.add_argument("--limit", type=int, default=100, help="revisions to consider")
+    history.add_argument(
+        "--every", type=int, default=1, help="sample every Nth revision (stride)"
+    )
+    history.add_argument("--max-files", type=int, default=50, help="files per revision")
+    history.add_argument("--engines", nargs="+", help="restrict to these engines")
+    history.add_argument("--trend", help="collapse to one value per revision for this column")
+    history.add_argument("--how", default="sum", choices=["sum", "mean", "max", "min"])
+    history.add_argument("--format", choices=["csv", "parquet"], default="csv")
+    history.add_argument("--out", help="directory to write into")
+    history.set_defaults(func=_cmd_history)
 
     doctor = subparsers.add_parser("doctor", help="report which engines are available")
     doctor.set_defaults(func=_cmd_doctor)

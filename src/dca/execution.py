@@ -24,6 +24,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 #: Wall-clock ceiling per fragment per tool (R-10).
@@ -112,6 +113,26 @@ def which(binary: str) -> str | None:
     if candidate.is_file() and os.access(candidate, os.X_OK):
         return str(candidate)
     return shutil.which(binary)
+
+
+@lru_cache(maxsize=32)
+def responds(binary_path: str, *args: str) -> bool:
+    """Whether a binary actually runs, not merely whether it exists on disk.
+
+    ``which`` answering yes is not the same as the tool working. A pyscn binary shipped for
+    the wrong libc, a Go runtime that panics on a particular kernel, a half-finished
+    install — all present a file that is executable and then aborts the moment it is asked
+    to do anything.
+
+    That distinction matters because the two states need opposite handling: a missing
+    engine is a configuration choice and its columns are legitimately null, while a
+    crashing engine is a fault someone should hear about. Without this probe both look
+    identical, and a batch of thousands silently loses a whole engine's columns.
+
+    Cached: this costs a process spawn, and it is asked once per adapter per run.
+    """
+    result = run([binary_path, *args], timeout=20)
+    return result.returncode == 0 and not result.timed_out
 
 
 def run(

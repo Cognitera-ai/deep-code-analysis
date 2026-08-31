@@ -16,6 +16,7 @@ from .ast_adapter import AstAdapter
 from .bandit_adapter import BanditAdapter
 from .complexipy_adapter import ComplexipyAdapter
 from .lizard_adapter import LizardAdapter
+from .prospector_adapter import ProspectorAdapter
 from .pylint_adapter import PylintAdapter
 from .pyscn_adapter import PyscnAdapter
 from .radon_adapter import RadonAdapter
@@ -34,7 +35,7 @@ DEFAULT_ADAPTERS: list[type[Adapter]] = [
 
 #: Engines behind an extra, off unless explicitly requested. pylint is here because of its
 #: licence, not its quality (ADR-0011).
-OPTIONAL_ADAPTERS: list[type[Adapter]] = [PylintAdapter]
+OPTIONAL_ADAPTERS: list[type[Adapter]] = [PylintAdapter, ProspectorAdapter]
 
 ALL_ADAPTERS: list[type[Adapter]] = DEFAULT_ADAPTERS + OPTIONAL_ADAPTERS
 
@@ -60,6 +61,6 @@ def build(names: list[str] | None = None, *, include_optional: bool = False) -> 
 
 __all__ = [
     "Adapter", "AstAdapter", "BanditAdapter", "ComplexipyAdapter", "LizardAdapter",
-    "PylintAdapter", "PyscnAdapter", "RadonAdapter", "VultureAdapter",
+    "ProspectorAdapter", "PylintAdapter", "PyscnAdapter", "RadonAdapter", "VultureAdapter",
     "DEFAULT_ADAPTERS", "OPTIONAL_ADAPTERS", "ALL_ADAPTERS", "build",
 ]

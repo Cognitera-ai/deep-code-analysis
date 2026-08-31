@@ -7,7 +7,7 @@ with the provenance to reproduce it and the disagreements left visible.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
-[![Engines: 8](https://img.shields.io/badge/engines-8-brightgreen.svg)](#the-engines)
+[![Engines: 9](https://img.shields.io/badge/engines-9-brightgreen.svg)](#the-engines)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 
 </div>
@@ -67,7 +67,7 @@ stayed invisible.
 
 ## What it does
 
-One call, eight engines, one schema — **114 metric columns**, each tagged with its source.
+One call, nine engines, one schema — **138 metric columns**, each tagged with its source.
 
 ```python
 from dca import analyse_many
@@ -90,8 +90,10 @@ frame.to_parquet("out/")     # metrics · functions · degradations · provenanc
 ### Measured
 
 Size · cyclomatic complexity · Halstead · maintainability index · cognitive complexity ·
-AST depth and node structure · coupling (CBO) · cohesion (LCOM4) · CFG structure · dead code
-(two independent methods) · security smells · code embeddings.
+AST depth and node structure · coupling (CBO) · cohesion (LCOM4) · **inheritance depth, number
+of children and response-for-class (DIT / NOC / RFC)** · CFG structure · dead code (two
+independent methods) · security smells · aggregated linter findings · code embeddings ·
+**metrics across git history**.
 
 ---
 
@@ -122,8 +124,9 @@ pip install "deep-code-analysis[pylint]"       # pylint score, subprocess only (
 
 ```bash
 dca analyse src/ --out results/ --format parquet --summary
-dca catalogue        # every column: engine, unit, range, meaning
-dca doctor           # why is this column empty?
+dca history . --trend lloc__radon        # how the project grew, revision by revision
+dca catalogue                            # every column: engine, unit, range, meaning
+dca doctor                               # why is this column empty?
 ```
 
 ---
@@ -141,8 +144,23 @@ which is precisely why nobody noticed a dependent variable was a constant.
 
 **3. It proves it did not distort anything.** Every adapter is checked against its engine's
 own command line interface — a separate code path — over hundreds of real files. Wrapping
-eight tools is easy; wrapping them without quietly changing their answers is the part that
+nine tools is easy; wrapping them without quietly changing their answers is the part that
 needs evidence.
+
+**4. It has a time axis.** Every other capability answers "what is this code like?". This
+one answers "what has it been becoming?", which is usually the more useful question — a
+complexity of 12 says little, a complexity that went from 4 to 12 says a lot.
+
+```python
+from dca import measure_history, trend
+
+frame = measure_history(".", limit=200, every=5)
+trend(frame, "cyclomatic_complexity_mean__radon", how="mean")
+```
+
+Files are read from git rather than the working tree, so an uncommitted edit cannot
+contaminate a historical point, and a file that did not exist at a revision produces no row
+rather than a zero — otherwise a project growing reads as a metric collapsing.
 
 ---
 
@@ -161,6 +179,7 @@ it right for years:
 | subprocess | [vulture](https://github.com/jendrikseipp/vulture) | MIT | dead code |
 | subprocess | [bandit](https://github.com/PyCQA/bandit) | Apache-2.0 | security smells |
 | optional | [pylint](https://github.com/pylint-dev/pylint) | GPL-2.0+ | score · category counts |
+| optional | [prospector](https://github.com/prospector-dev/prospector) | GPL-2.0 | aggregated findings across six linters |
 
 > **Credit belongs upstream.** These projects did the hard part. Most are maintained by one
 > or two unpaid people, and several have not shipped a release in years. This package is
@@ -227,12 +246,13 @@ part.
 
 | | Why it matters | Size |
 |---|---|---|
-| **DIT and RFC** | Depth of inheritance and response-for-class exist for Java and C#. **No maintained Python tool computes them.** Genuinely unfilled. | Substantial |
 | **Classify every divergence** | We measure that engines differ. Labelling each as *specification difference* or *bug* is the part that makes it publishable — and useful upstream. | Medium, high value |
 | **File the upstream issues** | `lizard`'s `-ENS` counter leaks across files; `radon`'s MI saturates on a fifth of ordinary code; `vulture`'s path whitelisting is undocumented. All three deserve to hear it from an issue. | Small, immediately useful |
 | **More engine parity** | `pyscn` and `complexipy` are compared shallowly. Deeper coverage means more confidence and probably more findings. | Medium |
 | **Multi-language** | v1 is Python only, deliberately. `lizard` already handles 20+ languages; `tree-sitter` is the natural path. | Large |
 | **A real corpus tier** | The conformance corpus has 12 hand-written fragments. Larger public tiers are specified but unbuilt. | Medium |
+
+Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Every decision in this project is written down and argued in [`docs/adr/`](docs/adr/) — 17
 records, including the ones that were **reversed** and why. If you disagree with one, the
@@ -246,8 +266,9 @@ Start here: [`docs/tech-spec.md`](docs/tech-spec.md) · [`docs/motivation.md`](d
 
 **v0.1.0 — working, tested, not yet on PyPI.**
 
-Eight engines · 114 metric columns · metric catalogue generated from the code and enforced
-by CI · every adapter checked against its engine's own CLI over real open-source code.
+Nine engines · 138 metric columns · 171 tests · metric catalogue generated from the code and
+enforced by CI · every adapter checked against its engine's own CLI over real open-source
+code.
 
 Honest about what is missing: two of three conformance corpus tiers are unbuilt, divergences
 are measured but not yet classified, and the upstream issues are unfiled. See

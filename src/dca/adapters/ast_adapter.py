@@ -9,6 +9,18 @@ The closest thing to prior art is each research group's private helper script.
 Because there is no upstream to defer to, every definition here is documented inline and
 kept simple enough to audit by reading. Roughly forty lines of counting, no cleverness.
 
+It also carries the **CK inheritance metrics** — depth of inheritance (DIT), number of
+children (NOC) and response for a class (RFC). These exist properly for Java (CK, JDepend)
+and C# (NDepend); the only tool that computed them for Python, OpenStaticAnalyzer, is EUPL
+licensed, written in C++, and has not been touched since 2022. Rather than depend on an
+abandoned copyleft binary, they are computed here from the syntax tree, where their
+definitions are short enough to audit by reading.
+
+**A limitation to state plainly:** a fragment only sees the classes it defines. A class
+inheriting from an imported base has a visible depth of 1, because the base is not in the
+tree. These are *intra-fragment* CK metrics, and on a single file that is what they can be.
+The columns say so, and ``base_classes_external`` reports how often it happened.
+
 One rule is not negotiable: **depth is computed iteratively**. The recursive version raises
 ``RecursionError`` on valid deeply-nested generated code, and one such fragment once
 aborted an entire export (ADR-0013).
@@ -23,6 +35,7 @@ from ..parsing import parse
 from ..schema import AdapterResult, Granularity, MetricSpec, NullSemantics
 
 _INVALID = NullSemantics.INVALID_INPUT
+_NA = NullSemantics.NOT_APPLICABLE
 
 _SPECS = [
     MetricSpec(
@@ -148,6 +161,90 @@ _SPECS = [
         null_semantics=_INVALID,
     ),
     MetricSpec(
+        key="class_count",
+        granularity=Granularity.FILE,
+        unit="count",
+        dtype="int",
+        description="Classes defined in the fragment.",
+        valid_range=(0, None),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
+        key="dit_max",
+        granularity=Granularity.CLASS,
+        unit="levels",
+        dtype="int",
+        description=(
+            "Depth of inheritance tree: longest chain of locally-defined base classes. "
+            "A class whose base is imported counts as 1, because the base is not visible "
+            "in the fragment."
+        ),
+        valid_range=(1, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="dit_mean",
+        granularity=Granularity.CLASS,
+        unit="levels",
+        dtype="float",
+        description="Mean depth of inheritance across the fragment's classes.",
+        valid_range=(1, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="noc_max",
+        granularity=Granularity.CLASS,
+        unit="count",
+        dtype="int",
+        description=(
+            "Number of children: most direct subclasses any class has within the fragment."
+        ),
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="rfc_max",
+        granularity=Granularity.CLASS,
+        unit="count",
+        dtype="int",
+        description=(
+            "Response for a class: its own methods plus the distinct methods it calls. "
+            "The largest such value in the fragment."
+        ),
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="rfc_mean",
+        granularity=Granularity.CLASS,
+        unit="count",
+        dtype="float",
+        description="Mean response for a class across the fragment's classes.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="methods_per_class_mean",
+        granularity=Granularity.CLASS,
+        unit="count",
+        dtype="float",
+        description="Mean number of methods defined per class.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="base_classes_external",
+        granularity=Granularity.FILE,
+        unit="count",
+        dtype="int",
+        description=(
+            "Base classes named but not defined in the fragment. How much of the "
+            "inheritance picture is outside what was measured."
+        ),
+        valid_range=(0, None),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
         key='operational_node_count',
         granularity=Granularity.FILE,
         unit='count',
@@ -195,6 +292,89 @@ def _depth(tree: ast.AST) -> int:
     return max_depth
 
 
+def _base_name(node: ast.expr) -> str | None:
+    """The name of a base class expression, for the forms that can be resolved statically.
+
+    ``class A(B)`` and ``class A(mod.B)`` are resolvable; ``class A(make_base())`` is not,
+    and returns None rather than a guess.
+    """
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _ck_metrics(tree: ast.AST) -> dict[str, float | int | None]:
+    """The CK inheritance metrics, over the classes visible in this fragment.
+
+    Intra-fragment by necessity: a base class that lives in another module cannot be
+    followed, so a chain that leaves the fragment stops there. ``base_classes_external``
+    records how often that happened, so a reader can tell a genuinely flat hierarchy from
+    one that is merely out of view.
+    """
+    classes = [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+    if not classes:
+        return {
+            "class_count": 0,
+            "dit_max": None, "dit_mean": None, "noc_max": None,
+            "rfc_max": None, "rfc_mean": None, "methods_per_class_mean": None,
+            "base_classes_external": 0,
+        }
+
+    local = {c.name: c for c in classes}
+    bases: dict[str, list[str]] = {}
+    external = 0
+    for cls in classes:
+        named = [_base_name(b) for b in cls.bases]
+        # `object` is the implicit root and adds a level to every class if counted.
+        resolved = [n for n in named if n in local and n != cls.name]
+        external += sum(1 for n in named if n is not None and n not in local and n != "object")
+        bases[cls.name] = resolved
+
+    def depth(name: str, seen: frozenset[str] = frozenset()) -> int:
+        # A cycle cannot occur in valid Python, but a fragment need not be importable.
+        if name in seen:
+            return 1
+        parents = bases.get(name, [])
+        if not parents:
+            return 1
+        return 1 + max(depth(p, seen | {name}) for p in parents)
+
+    dits = [depth(c.name) for c in classes]
+
+    children: dict[str, int] = dict.fromkeys(local, 0)
+    for parents in bases.values():
+        for parent in parents:
+            children[parent] = children.get(parent, 0) + 1
+
+    rfcs, method_counts = [], []
+    for cls in classes:
+        methods = [n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        method_counts.append(len(methods))
+        called: set[str] = set()
+        for method in methods:
+            for node in ast.walk(method):
+                if isinstance(node, ast.Call):
+                    name = _base_name(node.func)
+                    if name:
+                        called.add(name)
+        # RFC counts the class's own methods plus the distinct methods it can invoke.
+        rfcs.append(len(methods) + len(called - {m.name for m in methods}))
+
+    mean = lambda xs: round(sum(xs) / len(xs), 4)  # noqa: E731
+    return {
+        "class_count": len(classes),
+        "dit_max": max(dits),
+        "dit_mean": mean(dits),
+        "noc_max": max(children.values()) if children else 0,
+        "rfc_max": max(rfcs),
+        "rfc_mean": mean(rfcs),
+        "methods_per_class_mean": mean(method_counts),
+        "base_classes_external": external,
+    }
+
+
 class AstAdapter(Adapter):
     name = "ast"
     path = "import"
@@ -237,7 +417,7 @@ class AstAdapter(Adapter):
         def ratio(n: int) -> float:
             return round(n / total, 6) if total else 0.0
 
-        return {
+        metrics: dict[str, float | int | bool | None] = {
             "ast_depth": _depth(tree),
             "total_nodes": total,
             "functiondef_count": count(_FUNCS),
@@ -257,3 +437,5 @@ class AstAdapter(Adapter):
             "import_ratio": ratio(imports),
             "operational_node_count": count(_OPERATIONAL),
         }
+        metrics.update(_ck_metrics(tree))
+        return metrics

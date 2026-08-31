@@ -31,6 +31,8 @@ from __future__ import annotations
 
 from .core import Analyser, FragmentResult, analyse, analyse_many, comparable_keys, divergence
 from .frame import MetricFrame
+from .history import measure as measure_history
+from .history import revisions, trend
 from .provenance import GenerationProvenance, Provenance
 from .schema import SCHEMA_VERSION, Degradation, Granularity, MetricSpec, NullSemantics
 
@@ -43,6 +45,9 @@ __all__ = [
     "GenerationProvenance",
     "Granularity",
     "MetricFrame",
+    "measure_history",
+    "revisions",
+    "trend",
     "MetricSpec",
     "NullSemantics",
     "Provenance",

@@ -94,6 +94,14 @@ Integration: **import**.
 | `loop_ratio__ast` | file | ratio | float | 0–1 | invalid_input | Share of nodes that are loops. A zero here is semantic: the fragment genuinely has no loops. |
 | `if_ratio__ast` | file | ratio | float | 0–1 | invalid_input | Share of nodes that are conditionals. |
 | `import_ratio__ast` | file | ratio | float | 0–1 | invalid_input | Share of nodes that are imports. Correlates inversely with size by construction. |
+| `class_count__ast` | file | count | int | 0– | invalid_input | Classes defined in the fragment. |
+| `dit_max__ast` | class | levels | int | 1– | not_applicable | Depth of inheritance tree: longest chain of locally-defined base classes. A class whose base is imported counts as 1, because the base is not visible in the fragment. |
+| `dit_mean__ast` | class | levels | float | 1– | not_applicable | Mean depth of inheritance across the fragment's classes. |
+| `noc_max__ast` | class | count | int | 0– | not_applicable | Number of children: most direct subclasses any class has within the fragment. |
+| `rfc_max__ast` | class | count | int | 0– | not_applicable | Response for a class: its own methods plus the distinct methods it calls. The largest such value in the fragment. |
+| `rfc_mean__ast` | class | count | float | 0– | not_applicable | Mean response for a class across the fragment's classes. |
+| `methods_per_class_mean__ast` | class | count | float | 0– | not_applicable | Mean number of methods defined per class. |
+| `base_classes_external__ast` | file | count | int | 0– | invalid_input | Base classes named but not defined in the fragment. How much of the inheritance picture is outside what was measured. |
 | `operational_node_count__ast` | file | count | int | 0– | invalid_input | Nodes doing computational work: calls, assignments, subscripts, attribute access, conditional expressions, loops, conditionals, returns and comprehensions. Exists to distinguish 'no operators' from 'radon sees no operators'. |
 
 ## `complexipy`
@@ -167,6 +175,22 @@ Integration: **subprocess**.
 | `pylint_warning__pylint` | file | count | int | 0– | invalid_input | Warning messages (likely mistakes). |
 | `pylint_error__pylint` | file | count | int | 0– | invalid_input | Error messages (probable bugs). |
 
+## `prospector`
+
+Integration: **subprocess**.
+
+| Column | Granularity | Unit | Type | Range | Null means | Description |
+|---|---|---|---|---|---|---|
+| `prospector_messages__prospector` | file | count | int | 0– | invalid_input | Total findings from prospector's assembled linters. How much the Python linting ecosystem, taken together, objects to this code. |
+| `prospector_fixable__prospector` | file | count | int | 0– | invalid_input | Findings prospector reports as automatically fixable. |
+| `prospector_tools_reporting__prospector` | file | count | int | 0– | invalid_input | How many distinct linters found something. Breadth of objection, as opposed to volume. |
+| `prospector_pylint__prospector` | file | count | int | 0– | invalid_input | Findings attributed to pylint. |
+| `prospector_pyflakes__prospector` | file | count | int | 0– | invalid_input | Findings attributed to pyflakes. |
+| `prospector_pycodestyle__prospector` | file | count | int | 0– | invalid_input | Findings attributed to pycodestyle. |
+| `prospector_mccabe__prospector` | file | count | int | 0– | invalid_input | Findings attributed to mccabe. |
+| `prospector_dodgy__prospector` | file | count | int | 0– | invalid_input | Findings attributed to dodgy. |
+| `prospector_profile_validator__prospector` | file | count | int | 0– | invalid_input | Findings attributed to profile-validator. |
+
 ## Divergence columns
 
 For every metric that more than one engine computes, the schema carries two extra columns:
@@ -181,6 +205,7 @@ for Halstead, and it is the most informative signal in the table.
 
 | Metric | Engines compared | Ratio column | Flag column |
 |---|---|---|---|
+| `class_count` | `ast`, `pyscn` | `class_count__delta_ratio` | `class_count__divergent` |
 | `cognitive_complexity_mean` | `complexipy`, `pyscn` | `cognitive_complexity_mean__delta_ratio` | `cognitive_complexity_mean__divergent` |
 | `cyclomatic_complexity_max` | `lizard`, `pyscn`, `radon` | `cyclomatic_complexity_max__delta_ratio` | `cyclomatic_complexity_max__divergent` |
 | `cyclomatic_complexity_mean` | `lizard`, `pyscn`, `radon` | `cyclomatic_complexity_mean__delta_ratio` | `cyclomatic_complexity_mean__divergent` |

@@ -24,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 from ..contract import Adapter
-from ..execution import run, which
+from ..execution import responds, run, which
 from ..parsing import is_valid_python
 from ..schema import AdapterResult, Granularity, MetricSpec, NullSemantics
 
@@ -108,7 +108,9 @@ class PylintAdapter(Adapter):
         return parts[-1] if parts else None
 
     def is_available(self) -> bool:
-        return which(BINARY) is not None
+        """Present *and* working. A binary that aborts on startup is not availability."""
+        binary = which(BINARY)
+        return binary is not None and responds(binary, "--version")
 
     @property
     def declared_metrics(self) -> list[MetricSpec]:

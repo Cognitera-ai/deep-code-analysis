@@ -74,8 +74,12 @@ def test_null_rates_and_divergence_summary_are_usable(corpus):
 
 def test_empty_tables_are_not_written(tmp_path, mi_informative):
     """A run with no degradations should not leave an empty degradations file to puzzle
-    over."""
-    frame = analyse_many({"a": mi_informative})
+    over.
+
+    Restricted to import-path engines on purpose: a subprocess engine can crash in a given
+    environment, and this test is about the writer's behaviour, not the engines'.
+    """
+    frame = analyse_many({"a": mi_informative}, engines=["radon", "ast"])
     files = frame.to_csv(tmp_path)
 
     assert "metrics" in files
