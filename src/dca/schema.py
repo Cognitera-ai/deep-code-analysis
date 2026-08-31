@@ -111,6 +111,30 @@ def split_column(column: str) -> tuple[str, str | None]:
     return key, engine
 
 
+def is_true(value: object) -> bool:
+    """Whether a schema flag is set, safely across a round trip through pandas.
+
+    ``value is True`` is the obvious spelling and it is wrong here. A boolean read back
+    from a DataFrame is a ``numpy.bool_``, which since NumPy 2 even reports its type name
+    as ``"bool"`` — it prints as ``True``, compares equal to ``True``, and fails ``is
+    True``. The identity check therefore silently reports every divergence flag as unset,
+    with nothing looking broken.
+
+    That is exactly what happened: the CLI overview showed zero disagreements on a fragment
+    where radon reported 0 and lizard reported 139, and it was only caught by looking at a
+    rendered screenshot.
+
+    Nulls are excluded deliberately: a flag is null when there was nothing to compare, and
+    that is not the same as compared-and-agreed.
+    """
+    if value is None:
+        return False
+    try:
+        return bool(value)
+    except (TypeError, ValueError):  # pragma: no cover - a value that cannot be truthed
+        return False
+
+
 def delta_column(key: str) -> str:
     """Column holding the inter-engine ratio for ``key``."""
     return f"{key}{ENGINE_SEP}{DELTA_RATIO_SUFFIX}"

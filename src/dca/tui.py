@@ -152,12 +152,12 @@ if TEXTUAL:
             )
 
         def _divergence_count(self, row) -> int:
-            return sum(
-                1 for k, v in row.items() if k.endswith("__divergent") and v is True
-            )
+            from .schema import is_true
+
+            return sum(1 for k, v in row.items() if k.endswith("__divergent") and is_true(v))
 
         def _show(self, fragment_id: str) -> None:
-            from .schema import split_column
+            from .schema import is_true, split_column
 
             metrics = self.frame.metrics()
             match = metrics[metrics["fragment_id"].astype(str) == fragment_id]
@@ -179,13 +179,13 @@ if TEXTUAL:
                 readings = {e: v for e, v in grouped[key].items() if v is not None}
                 if len(readings) < 2:
                     continue  # nothing to compare: not a disagreement, just one opinion
-                divergent = row.get(f"{key}__divergent")
+                divergent = is_true(row.get(f"{key}__divergent"))
                 ratio = row.get(f"{key}__delta_ratio")
-                if self.only_divergent and divergent is not True:
+                if self.only_divergent and not divergent:
                     continue
                 label, colour = _severity(
                     None if ratio is None or ratio != ratio else float(ratio),
-                    bool(divergent) if divergent is not None else None,
+                    divergent,
                 )
                 for i, (engine, value) in enumerate(sorted(readings.items())):
                     shown = f"{value:.4g}" if isinstance(value, float) else str(value)

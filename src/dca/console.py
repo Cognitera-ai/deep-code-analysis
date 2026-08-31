@@ -35,7 +35,13 @@ _NOTABLE = 1.5
 
 
 def console(**kwargs: Any):
-    """A Rich console, or None when the extra is absent."""
+    """A Rich console, or None when the extra is absent.
+
+    ``highlight`` defaults off: Rich's automatic highlighting turns numbers cyan inside
+    ordinary sentences, which reads as emphasis that means nothing. Colour in this package
+    is reserved for divergence severity.
+    """
+    kwargs.setdefault("highlight", False)
     return Console(**kwargs) if RICH else None
 
 
@@ -81,7 +87,7 @@ def print_doctor(rows: list[dict[str, Any]], version: str, embeddings: bool) -> 
         print(f"\nembeddings extra: {'available' if embeddings else 'not installed'}")
         return
 
-    c = Console()
+    c = console()
     table = Table(title=f"dca {version} · engines", title_style="bold", header_style="bold")
     table.add_column("engine", style="cyan", no_wrap=True)
     table.add_column("path")
@@ -146,7 +152,7 @@ def print_divergence(rows: list[dict[str, Any]]) -> None:
             Text(_fmt(median), style=style),
             Text(_fmt(r.get("ratio_max")), style=style),
         )
-    Console().print(table)
+    console().print(table)
 
 
 def print_fragment(fragment_id: str, by_metric: dict[str, dict[str, Any]]) -> None:
@@ -163,7 +169,7 @@ def print_fragment(fragment_id: str, by_metric: dict[str, dict[str, Any]]) -> No
             print(f"  {key:<34} {values}")
         return
 
-    c = Console()
+    c = console()
     engines = sorted({e for r in by_metric.values() for e in r if e != "_meta"})
     table = Table(title=fragment_id, title_style="bold cyan", header_style="bold")
     table.add_column("metric", style="cyan", no_wrap=True)
@@ -209,7 +215,7 @@ def print_overview(rows: list[dict[str, Any]], total_columns: int) -> None:
         print(f"\n{len(rows)} fragments, {total_columns} metric columns. --out writes them all.")
         return
 
-    c = Console()
+    c = console()
     table = Table(header_style="bold", expand=False)
     # A width cap on the identifier rather than letting it consume the row: full paths are
     # long, the informative part is the tail, and headers truncated to "en… di…" tell the
@@ -232,7 +238,7 @@ def print_overview(rows: list[dict[str, Any]], total_columns: int) -> None:
         )
     c.print(table)
     c.print(
-        f"[dim]{len(rows)} fragments · {total_columns} metric columns · "
-        "[/dim][bold]--out[/bold][dim] writes every column; "
-        "[/dim][bold]--summary[/bold][dim] shows where engines disagreed[/dim]"
+        f"[dim]{len(rows)} fragments · {total_columns} metric columns ·[/dim] "
+        "[bold]--out[/bold][dim] writes every column;[/dim] "
+        "[bold]--summary[/bold][dim] shows where engines disagreed[/dim]"
     )

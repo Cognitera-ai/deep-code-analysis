@@ -17,6 +17,7 @@ from . import __version__
 from .adapters import build as build_adapters
 from .catalogue import generate as generate_catalogue
 from .core import Analyser
+from .schema import is_true
 
 
 def _read_sources(paths: list[str]) -> dict[str, str]:
@@ -60,7 +61,7 @@ def _cmd_analyse(args: argparse.Namespace) -> int:
                 "valid": bool(row.get("is_valid_python")),
                 "lloc": row.get("lloc__radon"),
                 "cc": row.get("cyclomatic_complexity_mean__radon"),
-                "divergent": sum(1 for c in divergent_cols if row.get(c) is True),
+                "divergent": sum(1 for c in divergent_cols if is_true(row.get(c))),
             }
             for _, row in metrics.iterrows()
         ]

@@ -79,3 +79,38 @@ def test_rich_output_contains_the_same_facts(capsys):
     assert "radon" in out and "pyscn" in out
     assert "MISSING" in out
     assert "available" in out
+
+
+def test_divergence_flags_survive_a_round_trip_through_pandas():
+    """The bug this predicate exists for.
+
+    A boolean read back from a DataFrame is a numpy.bool_, which since NumPy 2 reports its
+    type name as "bool", prints as True and compares equal to True — but fails `is True`.
+    The obvious identity check therefore reported every divergence as absent, on exactly
+    the fragments the project exists to talk about, with nothing looking wrong.
+    """
+    from dca.core import Analyser
+    from dca.schema import is_true
+
+    frame = Analyser(engines=["radon", "lizard", "ast"]).analyse_many(
+        {"s.py": "def f(a, b):\n    return sum([a, b])\n"}
+    )
+    row = frame.metrics().iloc[0]
+    flag = row["halstead_volume__divergent"]
+
+    assert is_true(flag), "the engines do disagree on this fragment"
+    assert flag is not True, "if this ever becomes a real bool, the predicate can go"
+
+    counted = sum(
+        1 for c in frame.metrics().columns if c.endswith("__divergent") and is_true(row.get(c))
+    )
+    assert counted > 0
+
+
+def test_is_true_treats_null_as_not_set():
+    """A null flag means there was nothing to compare — not compared-and-agreed."""
+    from dca.schema import is_true
+
+    assert is_true(None) is False
+    assert is_true(False) is False
+    assert is_true(True) is True

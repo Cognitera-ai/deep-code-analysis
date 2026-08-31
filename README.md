@@ -2,13 +2,17 @@
 
 # deep-code-analysis
 
-**Every Python code metric the community knows how to compute, in one table —
-with the provenance to reproduce it and the disagreements left visible.**
+### Nine engines. One schema. Every disagreement visible.
 
+<img src="docs/assets/demo.gif" alt="radon reports a Halstead volume of 0 where lizard reports 138.97, on the same code" width="100%">
+
+[![PyPI](https://img.shields.io/pypi/v/deep-code-analysis?color=blue)](https://pypi.org/project/deep-code-analysis/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
-[![Engines: 9](https://img.shields.io/badge/engines-9-brightgreen.svg)](#the-engines)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-182-brightgreen.svg)](tests/)
+[![Metrics](https://img.shields.io/badge/metric%20columns-138-brightgreen.svg)](docs/metric-catalogue.md)
+
+**[Install](#install)** · **[Why](#start-with-a-problem)** · **[Contribute](#contributing)** · **[Catalogue](docs/metric-catalogue.md)**
 
 </div>
 
@@ -233,6 +237,14 @@ distinction is load-bearing and [written down](docs/adr/0010-conformance-charact
 
 ## Contributing
 
+> **The honest pitch.** This package is one day old and delegates every measurement to
+> tools that have been getting it right for years. It is not competing with them, and it
+> will never be "better than radon" — it depends on radon. What it can be is the place
+> where the problems all of those tools share get worked on, so that no single unpaid
+> maintainer has to carry them alone.
+>
+> If that sounds like your kind of problem, the entry cost is deliberately one file.
+
 **Adding an engine is one file.** Every engine sits behind a single contract, so a new
 adapter needs no knowledge of any other, and the contract tests apply to it automatically
 the moment it is registered:
@@ -253,6 +265,12 @@ columns and the parity tests all pick it up on their own. If your metric overlap
 another engine already emits, **the comparison appears for free** — that is the interesting
 part.
 
+<div align="center">
+
+**[Read CONTRIBUTING.md →](CONTRIBUTING.md)** · **[Browse open issues →](https://github.com/Cognitera-ai/deep-code-analysis/issues)** · **[Good first issues →](https://github.com/Cognitera-ai/deep-code-analysis/labels/good%20first%20issue)**
+
+</div>
+
 ### Open problems, if you want a real one
 
 | | Why it matters | Size |
@@ -261,6 +279,7 @@ part.
 | **File the upstream issues** | `lizard`'s `-ENS` counter leaks across files; `radon`'s MI saturates on a fifth of ordinary code; `vulture`'s path whitelisting is undocumented. All three deserve to hear it from an issue. | Small, immediately useful |
 | **More engine parity** | `pyscn` and `complexipy` are compared shallowly. Deeper coverage means more confidence and probably more findings. | Medium |
 | **Multi-language** | v1 is Python only, deliberately. `lizard` already handles 20+ languages; `tree-sitter` is the natural path. | Large |
+| **A metric nobody wraps yet** | If you maintain an analysis tool and want it in the vector, the adapter is one file and the divergence comparison appears for free. | Yours |
 | **A real corpus tier** | The conformance corpus has 12 hand-written fragments. Larger public tiers are specified but unbuilt. | Medium |
 
 Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
