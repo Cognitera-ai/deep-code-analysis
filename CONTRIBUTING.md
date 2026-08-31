@@ -143,3 +143,15 @@ Be accurate and be kind, in that order, and never at each other's expense. This 
 makes public claims about other people's software; it holds itself to measured, versioned,
 reproducible statements, and it expects the same in its issues and reviews. "radon 6.0.1
 recognises five AST node types as operators" is a contribution. "radon is broken" is not.
+
+## A note on commit identity
+
+Commits here are authored as `29237451+TheTechSensei@users.noreply.github.com`. That is
+GitHub's noreply address: it links commits to the right account without publishing a
+personal email address in a repository that anyone can clone. Legal attribution lives where
+it belongs — in `LICENSE` and `pyproject.toml`, under the author's full name.
+
+Every commit also carries a `Co-Authored-By` trailer for the AI assistance used to write it.
+That is not decoration: JOSS and several artifact tracks now require an explicit AI usage
+disclosure, and a commit history that already records it is the honest and effortless way
+to satisfy that.
