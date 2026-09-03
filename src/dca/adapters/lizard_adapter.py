@@ -250,6 +250,89 @@ _SPECS = [
         valid_range=(0, None),
         null_semantics=_NA,
     ),
+    MetricSpec(
+        key="halstead_h1",
+        granularity=Granularity.FUNCTION,
+        unit="count",
+        dtype="int",
+        description=(
+            "Distinct operators, summed across functions. lizard measures per function and "
+            "cannot deduplicate a name used in two of them, so this overcounts a fragment's "
+            "true vocabulary — radon's reading of the same key is whole-fragment. That "
+            "difference is a documented reason the two disagree, not an error in either."
+        ),
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="halstead_h2",
+        granularity=Granularity.FUNCTION,
+        unit="count",
+        dtype="int",
+        description=(
+            "Distinct operands, summed across functions. Same caveat as halstead_h1: "
+            "per-function counts cannot be deduplicated across the fragment."
+        ),
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="halstead_n1",
+        granularity=Granularity.FUNCTION,
+        unit="count",
+        dtype="int",
+        description="Total operator occurrences, summed across functions.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="halstead_n2",
+        granularity=Granularity.FUNCTION,
+        unit="count",
+        dtype="int",
+        description="Total operand occurrences, summed across functions.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="halstead_time",
+        granularity=Granularity.FUNCTION,
+        unit="seconds",
+        dtype="float",
+        description="Halstead's estimated implementation time, summed across functions.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="halstead_bugs",
+        granularity=Granularity.FUNCTION,
+        unit="count",
+        dtype="float",
+        description="Halstead's estimated delivered bugs, summed across functions.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="top_nesting_level_max",
+        granularity=Granularity.FUNCTION,
+        unit="levels",
+        dtype="int",
+        description=(
+            "Deepest nesting level a function's own body starts at. Distinct from "
+            "max_nesting_depth, which is how deep it goes from there."
+        ),
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key="function_token_length_max",
+        granularity=Granularity.FUNCTION,
+        unit="tokens",
+        dtype="int",
+        description="Longest function measured in lizard's own token length.",
+        valid_range=(0, None),
+        null_semantics=_NA,
+    ),
 ]
 
 
@@ -325,6 +408,35 @@ class LizardAdapter(Adapter):
             round(sum(difficulties) / len(difficulties), 6) if difficulties else None
         )
         values["halstead_vocabulary"] = round(sum(vocabs) / len(vocabs), 6) if vocabs else None
+
+        # The raw operator and operand counts, under the same keys radon uses. Carrying
+        # them is what turns "the engines disagree about volume" into "and here is why":
+        # on the same function radon may see three distinct operators where lizard sees
+        # nine, and the volume follows from that rather than from a different formula.
+        def total(attribute: str) -> int | None:
+            found = [getattr(f, attribute, None) for f in funcs]
+            found = [v for v in found if v is not None]
+            return sum(found) if found else None
+
+        # lizard's naming is the reverse of radon's: lowercase n is distinct, uppercase N
+        # is total. Mapping them onto radon's keys is the whole point, so it has to be
+        # right rather than plausible.
+        values["halstead_h1"] = total("halstead_n1")   # distinct operators
+        values["halstead_h2"] = total("halstead_n2")   # distinct operands
+        values["halstead_n1"] = total("halstead_N1")   # total operators
+        values["halstead_n2"] = total("halstead_N2")   # total operands
+
+        times = [getattr(f, "halstead_time", None) for f in funcs]
+        times = [t for t in times if t is not None]
+        bugs = [getattr(f, "halstead_bugs", None) for f in funcs]
+        bugs = [b for b in bugs if b is not None]
+        values["halstead_time"] = round(sum(times), 6) if times else None
+        values["halstead_bugs"] = round(sum(bugs), 6) if bugs else None
+
+        values["top_nesting_level_max"] = max(
+            (getattr(f, "top_nesting_level", 0) or 0) for f in funcs
+        )
+        values["function_token_length_max"] = max((getattr(f, "length", 0) or 0) for f in funcs)
 
         functions = [
             {

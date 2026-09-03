@@ -2,15 +2,15 @@
 
 # deep-code-analysis
 
-### Nine engines. One schema. Every disagreement visible.
+### Ten engines. One schema. Every disagreement visible.
 
 <img src="docs/assets/demo.gif" alt="radon reports a Halstead volume of 0 where lizard reports 138.97, on the same code" width="100%">
 
 [![PyPI](https://img.shields.io/pypi/v/deep-code-analysis?color=blue)](https://pypi.org/project/deep-code-analysis/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
-[![Tests](https://img.shields.io/badge/tests-182-brightgreen.svg)](tests/)
-[![Metrics](https://img.shields.io/badge/metric%20columns-138-brightgreen.svg)](docs/metric-catalogue.md)
+[![Tests](https://img.shields.io/badge/tests-201-brightgreen.svg)](tests/)
+[![Metrics](https://img.shields.io/badge/metric%20columns-173-brightgreen.svg)](docs/metric-catalogue.md)
 
 **[Install](#install)** · **[Why](#start-with-a-problem)** · **[Contribute](#contributing)** · **[Catalogue](docs/metric-catalogue.md)**
 
@@ -71,7 +71,7 @@ stayed invisible.
 
 ## What it does
 
-One call, nine engines, one schema — **138 metric columns**, each tagged with its source.
+One call, ten engines, one schema — **173 metric columns**, each tagged with its source.
 
 ```python
 from dca import analyse_many
@@ -94,10 +94,15 @@ frame.to_parquet("out/")     # metrics · functions · degradations · provenanc
 ### Measured
 
 Size · cyclomatic complexity · Halstead · maintainability index · cognitive complexity ·
-AST depth and node structure · coupling (CBO) · cohesion (LCOM4) · **inheritance depth, number
-of children and response-for-class (DIT / NOC / RFC)** · CFG structure · dead code (two
-independent methods) · security smells · aggregated linter findings · code embeddings ·
-**metrics across git history**.
+AST depth and node structure · coupling (CBO) · cohesion (LCOM4) · inheritance depth, number
+of children and response-for-class (DIT / NOC / RFC) · **lexical vocabulary and diversity** ·
+CFG structure · dead code (two independent methods) · **clone detection (APTED)** · security
+smells · aggregated linter findings · code embeddings · metrics across git history.
+
+**18 of those metrics are computed by more than one engine**, so the schema carries each
+engine's answer plus their ratio. That includes the raw Halstead operator and operand
+counts, which is what turns "radon and lizard disagree about volume" into "and the
+disagreement is entirely in the operator table".
 
 ---
 
@@ -189,7 +194,8 @@ it right for years:
 | import | [radon](https://github.com/rubik/radon) | MIT | size · McCabe · Halstead · maintainability |
 | import | [lizard](https://github.com/terryyin/lizard) | MIT | per-function metrics · second Halstead reading |
 | import | [complexipy](https://github.com/rohaquinlop/complexipy) | MIT | cognitive complexity |
-| import | Python `ast` | PSF | structural metrics |
+| import | Python `ast` | PSF | structural metrics · CK inheritance (DIT, NOC, RFC) |
+| import | Python `tokenize` | PSF | lexical vocabulary, where Halstead reports nothing |
 | subprocess | [pyscn](https://github.com/ludo-technologies/pyscn) | MIT | CBO · LCOM4 · CFG · clones |
 | subprocess | [vulture](https://github.com/jendrikseipp/vulture) | MIT | dead code |
 | subprocess | [bandit](https://github.com/PyCQA/bandit) | Apache-2.0 | security smells |
@@ -296,9 +302,9 @@ Start here: [`docs/tech-spec.md`](docs/tech-spec.md) · [`docs/motivation.md`](d
 
 **v0.1.0 — working, tested, not yet on PyPI.**
 
-Nine engines · 138 metric columns · 171 tests · metric catalogue generated from the code and
+Ten engines · 173 metric columns · 201 tests · metric catalogue generated from the code and
 enforced by CI · every adapter checked against its engine's own CLI over real open-source
-code.
+code, with coverage tests asserting no engine field is silently dropped.
 
 Honest about what is missing: two of three conformance corpus tiers are unbuilt, divergences
 are measured but not yet classified, and the upstream issues are unfiled. See

@@ -631,3 +631,85 @@ def test_lexical_metrics_match_a_reference_implementation(sources):
                 mismatches.append(f"{path}: {key} ours={values[key]} expected={want}")
 
     _report(mismatches, checked, "files")
+
+
+def test_no_lizard_metric_is_silently_dropped():
+    """Coverage in the other direction: we did not merely avoid breaking lizard, we carry
+    what it produces.
+
+    Anything lizard exposes per function must either be in the schema or be named here with
+    a reason. A field that is quietly absent is a measurement we claimed to aggregate and
+    did not — the failure mode this whole package exists to prevent, applied to itself.
+    """
+    import lizard
+
+
+    analyzer = lizard.FileAnalyzer(lizard.get_extensions(["halstead"]))
+    function = analyzer.analyze_source_code(
+        "s.py", "def f(a, b):\n    if a > b:\n        return a + b\n    return b - a\n"
+    ).function_list[0]
+
+    carried = {
+        "cyclomatic_complexity", "nloc", "token_count", "parameters", "max_nesting_depth",
+        "halstead_volume", "halstead_difficulty", "halstead_effort", "halstead_length",
+        "halstead_vocabulary", "halstead_n1", "halstead_n2", "halstead_N1", "halstead_N2",
+        "halstead_time", "halstead_bugs", "top_nesting_level", "length",
+        "name", "start_line", "end_line",
+    }
+    excluded = {
+        "fan_in": "always 0 — lizard declares the field but does not compute it",
+        "fan_out": "always 0 — same",
+        "general_fan_out": "always 0 — same",
+        "filename": "identity, not a metric",
+        "location": "identity, not a metric",
+        "long_name": "identity, not a metric",
+        "name_in_space": "identity, not a metric",
+        "unqualified_name": "identity, not a metric",
+        "forgiven_metrics": "lizard's own suppression bookkeeping",
+        "halstead": "the metrics object itself; its fields are carried individually",
+        "full_parameters": "the names; the count is carried as avg_param_count",
+        "parameter_count": "duplicate of len(parameters), which is carried",
+    }
+
+    exposed = {
+        attribute
+        for attribute in dir(function)
+        if not attribute.startswith("_") and not callable(getattr(function, attribute, None))
+    }
+    unaccounted = sorted(exposed - carried - set(excluded))
+
+    assert not unaccounted, (
+        f"lizard exposes fields we neither carry nor explain: {unaccounted}. "
+        "Add them to the schema, or list them in `excluded` with a reason."
+    )
+
+    # And the exclusions must stay honest: a field excluded for always being zero should
+    # fail this if lizard ever implements it.
+    for zero_field in ("fan_in", "fan_out", "general_fan_out"):
+        assert getattr(function, zero_field) == 0, (
+            f"lizard now computes {zero_field}; it should be carried rather than excluded"
+        )
+
+
+def test_the_operator_table_explains_the_halstead_divergence():
+    """The payoff of carrying the raw counts.
+
+    Carrying volume alone showed *that* radon and lizard disagree. Carrying h1, h2, n1 and
+    n2 shows *why*: on this function the operand counts agree closely while the distinct
+    operator counts differ several-fold, which is radon's five-node operator table and
+    nothing else. A divergence that can be attributed is a finding; one that cannot is an
+    anecdote.
+    """
+    from dca.core import Analyser
+
+    result = Analyser(engines=["radon", "lizard"]).analyse(
+        "def f(a, b):\n    if a > b:\n        return a + b\n    return b - a\n"
+    )
+
+    operators = result.metrics["halstead_h1__delta_ratio"]
+    operands = result.metrics["halstead_h2__delta_ratio"]
+
+    assert operators is not None and operands is not None
+    assert operators > operands, (
+        "the disagreement should sit in the operators, not the operands"
+    )

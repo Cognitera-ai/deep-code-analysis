@@ -32,7 +32,7 @@ from ..parsing import is_valid_python
 from ..schema import AdapterResult, Granularity, MetricSpec, NullSemantics
 
 BINARY = "pyscn"
-_SELECT = "complexity,deadcode,cbo,lcom"
+_SELECT = "complexity,deadcode,cbo,lcom,clones"
 
 _NA = NullSemantics.NOT_APPLICABLE
 _INVALID = NullSemantics.INVALID_INPUT
@@ -153,6 +153,65 @@ _SPECS = [
         dtype='float',
         description='Share of CFG blocks that are unreachable.',
         valid_range=(0, 1),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
+        key='clone_count',
+        granularity=Granularity.FILE,
+        unit='count',
+        dtype='int',
+        description=(
+            'Code fragments pyscn found to be clones of another, by tree edit distance '
+            '(APTED). Within one analysed fragment this is self-similarity — two functions '
+            'that resemble each other — because the unit of analysis is a single fragment '
+            'rather than a repository.'
+        ),
+        valid_range=(0, None),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
+        key='clone_pairs',
+        granularity=Granularity.FILE,
+        unit='count',
+        dtype='int',
+        description='Pairs of fragments judged similar enough to be clones of each other.',
+        valid_range=(0, None),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
+        key='clone_groups',
+        granularity=Granularity.FILE,
+        unit='count',
+        dtype='int',
+        description=(
+            'Clusters of mutually similar fragments. Three near-identical functions are '
+            'one group, not three pairs.'
+        ),
+        valid_range=(0, None),
+        null_semantics=_INVALID,
+    ),
+    MetricSpec(
+        key='clone_similarity_mean',
+        granularity=Granularity.FILE,
+        unit='ratio',
+        dtype='float',
+        description=(
+            'Mean similarity among the clone pairs found. Null when none were found, '
+            'because there is no mean of nothing.'
+        ),
+        valid_range=(0, 1),
+        null_semantics=_NA,
+    ),
+    MetricSpec(
+        key='clone_fragments_analysed',
+        granularity=Granularity.FILE,
+        unit='count',
+        dtype='int',
+        description=(
+            'Fragments pyscn considered for clone detection. The denominator the clone '
+            'counts should be read against.'
+        ),
+        valid_range=(0, None),
         null_semantics=_INVALID,
     ),
     MetricSpec(
@@ -282,6 +341,7 @@ class PyscnAdapter(Adapter):
         csum = complexity.get("summary") or {}
         raw_metrics = complexity.get("raw_metrics_summary") or {}
         dead = (report.get("dead_code") or {}).get("summary") or {}
+        clones = (report.get("clone") or {}).get("statistics") or {}
         cbo = (report.get("cbo") or {}).get("summary") or {}
         lcom = (report.get("lcom") or {}).get("summary") or {}
 
@@ -314,6 +374,17 @@ class PyscnAdapter(Adapter):
             "nesting_depth_max": (
                 _num(csum.get("max_class_nesting_depth")) if has_functions else None
             ),
+            "clone_count": _num(clones.get("total_clones")),
+            "clone_pairs": _num(clones.get("total_clone_pairs")),
+            "clone_groups": _num(clones.get("total_clone_groups")),
+            # No clones means there is no mean similarity to report — null, not zero, which
+            # would read as "these fragments are maximally dissimilar".
+            "clone_similarity_mean": (
+                _num(clones.get("average_similarity"))
+                if _num(clones.get("total_clone_pairs"))
+                else None
+            ),
+            "clone_fragments_analysed": _num(clones.get("total_fragments")),
             "dead_code_findings": _num(dead.get("total_findings")),
             "dead_code_ratio": _num(dead.get("overall_dead_ratio")),
             "function_count": int(functions_parsed),

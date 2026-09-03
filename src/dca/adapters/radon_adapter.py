@@ -187,6 +187,19 @@ _SPECS = [
         null_semantics=NullSemantics.INVALID_INPUT,
     ),
     MetricSpec(
+        key='halstead_calculated_length',
+        granularity=Granularity.FILE,
+        unit='count',
+        dtype='float',
+        description=(
+            'Halstead predicted length from the vocabulary alone. Comparing it against the '
+            'measured length is his own consistency check: a program far from its '
+            'prediction uses its vocabulary unusually.'
+        ),
+        valid_range=(0, None),
+        null_semantics=NullSemantics.INVALID_INPUT,
+    ),
+    MetricSpec(
         key='halstead_length',
         granularity=Granularity.FILE,
         unit='count',
@@ -385,6 +398,7 @@ class RadonAdapter(Adapter):
             "halstead_n2": total.N2,
             "halstead_vocabulary": total.vocabulary,
             "halstead_length": total.length,
+            "halstead_calculated_length": round(total.calculated_length, 6),
             "halstead_volume": volume,
             "halstead_difficulty": round(total.difficulty, 6),
             "halstead_effort": round(total.effort, 6),

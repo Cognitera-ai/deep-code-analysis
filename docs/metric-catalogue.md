@@ -36,6 +36,7 @@ Integration: **import**.
 | `halstead_n1__radon` | file | count | int | 0– | invalid_input | Total operator occurrences. |
 | `halstead_n2__radon` | file | count | int | 0– | invalid_input | Total operand occurrences. |
 | `halstead_vocabulary__radon` | file | count | int | 0– | invalid_input | Distinct operators plus distinct operands. |
+| `halstead_calculated_length__radon` | file | count | float | 0– | invalid_input | Halstead predicted length from the vocabulary alone. Comparing it against the measured length is his own consistency check: a program far from its prediction uses its vocabulary unusually. |
 | `halstead_length__radon` | file | count | int | 0– | invalid_input | Total operator plus operand occurrences. |
 | `halstead_volume__radon` | file | bits | float | 0– | invalid_input | Halstead volume. Zero whenever radon recognises no operators, which is common and usually not a real absence — see halstead_volume_is_zero. |
 | `halstead_difficulty__radon` | file | ratio | float | 0– | invalid_input | Halstead difficulty: operator variety against operand repetition. |
@@ -74,6 +75,14 @@ Integration: **import**.
 | `halstead_effort__lizard` | function | bits | float | 0– | not_applicable | Halstead effort summed across functions. |
 | `halstead_length__lizard` | function | count | int | 0– | not_applicable | Halstead length summed across functions. |
 | `halstead_vocabulary__lizard` | function | count | int | 0– | not_applicable | Mean Halstead vocabulary across functions. |
+| `halstead_h1__lizard` | function | count | int | 0– | not_applicable | Distinct operators, summed across functions. lizard measures per function and cannot deduplicate a name used in two of them, so this overcounts a fragment's true vocabulary — radon's reading of the same key is whole-fragment. That difference is a documented reason the two disagree, not an error in either. |
+| `halstead_h2__lizard` | function | count | int | 0– | not_applicable | Distinct operands, summed across functions. Same caveat as halstead_h1: per-function counts cannot be deduplicated across the fragment. |
+| `halstead_n1__lizard` | function | count | int | 0– | not_applicable | Total operator occurrences, summed across functions. |
+| `halstead_n2__lizard` | function | count | int | 0– | not_applicable | Total operand occurrences, summed across functions. |
+| `halstead_time__lizard` | function | seconds | float | 0– | not_applicable | Halstead's estimated implementation time, summed across functions. |
+| `halstead_bugs__lizard` | function | count | float | 0– | not_applicable | Halstead's estimated delivered bugs, summed across functions. |
+| `top_nesting_level_max__lizard` | function | levels | int | 0– | not_applicable | Deepest nesting level a function's own body starts at. Distinct from max_nesting_depth, which is how deep it goes from there. |
+| `function_token_length_max__lizard` | function | tokens | int | 0– | not_applicable | Longest function measured in lizard's own token length. |
 
 ## `ast`
 
@@ -149,6 +158,11 @@ Integration: **subprocess**.
 | `nesting_depth_max__pyscn` | function | levels | int | 0– | not_applicable | Deepest nesting of any function. |
 | `dead_code_findings__pyscn` | file | count | int | 0– | invalid_input | Unreachable code blocks found through the control-flow graph. A different method from vulture's heuristic, and deliberately not reconciled with it (R-22). |
 | `dead_code_ratio__pyscn` | file | ratio | float | 0–1 | invalid_input | Share of CFG blocks that are unreachable. |
+| `clone_count__pyscn` | file | count | int | 0– | invalid_input | Code fragments pyscn found to be clones of another, by tree edit distance (APTED). Within one analysed fragment this is self-similarity — two functions that resemble each other — because the unit of analysis is a single fragment rather than a repository. |
+| `clone_pairs__pyscn` | file | count | int | 0– | invalid_input | Pairs of fragments judged similar enough to be clones of each other. |
+| `clone_groups__pyscn` | file | count | int | 0– | invalid_input | Clusters of mutually similar fragments. Three near-identical functions are one group, not three pairs. |
+| `clone_similarity_mean__pyscn` | file | ratio | float | 0–1 | not_applicable | Mean similarity among the clone pairs found. Null when none were found, because there is no mean of nothing. |
+| `clone_fragments_analysed__pyscn` | file | count | int | 0– | invalid_input | Fragments pyscn considered for clone detection. The denominator the clone counts should be read against. |
 | `function_count__pyscn` | file | count | int | 0– | invalid_input | Functions pyscn parsed. |
 | `sloc__pyscn` | file | lines | int | 0– | invalid_input | Source lines of code, as pyscn counts them. |
 | `lloc__pyscn` | file | lines | int | 0– | invalid_input | Logical lines of code, as pyscn counts them. |
@@ -226,9 +240,15 @@ for Halstead, and it is the most informative signal in the table.
 | `cyclomatic_complexity_max` | `lizard`, `pyscn`, `radon` | `cyclomatic_complexity_max__delta_ratio` | `cyclomatic_complexity_max__divergent` |
 | `cyclomatic_complexity_mean` | `lizard`, `pyscn`, `radon` | `cyclomatic_complexity_mean__delta_ratio` | `cyclomatic_complexity_mean__divergent` |
 | `function_count` | `lizard`, `pyscn` | `function_count__delta_ratio` | `function_count__divergent` |
+| `halstead_bugs` | `lizard`, `radon` | `halstead_bugs__delta_ratio` | `halstead_bugs__divergent` |
 | `halstead_difficulty` | `lizard`, `radon` | `halstead_difficulty__delta_ratio` | `halstead_difficulty__divergent` |
 | `halstead_effort` | `lizard`, `radon` | `halstead_effort__delta_ratio` | `halstead_effort__divergent` |
+| `halstead_h1` | `lizard`, `radon` | `halstead_h1__delta_ratio` | `halstead_h1__divergent` |
+| `halstead_h2` | `lizard`, `radon` | `halstead_h2__delta_ratio` | `halstead_h2__divergent` |
 | `halstead_length` | `lizard`, `radon` | `halstead_length__delta_ratio` | `halstead_length__divergent` |
+| `halstead_n1` | `lizard`, `radon` | `halstead_n1__delta_ratio` | `halstead_n1__divergent` |
+| `halstead_n2` | `lizard`, `radon` | `halstead_n2__delta_ratio` | `halstead_n2__divergent` |
+| `halstead_time` | `lizard`, `radon` | `halstead_time__delta_ratio` | `halstead_time__divergent` |
 | `halstead_vocabulary` | `lizard`, `radon` | `halstead_vocabulary__delta_ratio` | `halstead_vocabulary__divergent` |
 | `halstead_volume` | `lizard`, `radon` | `halstead_volume__delta_ratio` | `halstead_volume__divergent` |
 | `lloc` | `pyscn`, `radon` | `lloc__delta_ratio` | `lloc__divergent` |
