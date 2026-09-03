@@ -338,7 +338,6 @@ class PyscnAdapter(Adapter):
 
     def _extract(self, report: dict) -> dict[str, float | int | bool | None]:
         complexity = report.get("complexity") or {}
-        csum = complexity.get("summary") or {}
         raw_metrics = complexity.get("raw_metrics_summary") or {}
         dead = (report.get("dead_code") or {}).get("summary") or {}
         clones = (report.get("clone") or {}).get("statistics") or {}
@@ -368,7 +367,6 @@ class PyscnAdapter(Adapter):
         classes_analyzed = (
             _num(lcom.get("classes_analyzed")) or _num(cbo.get("classes_analyzed")) or 0
         )
-        has_functions = bool(functions_parsed)
         has_classes = bool(classes_analyzed)
 
         def mean(xs):
