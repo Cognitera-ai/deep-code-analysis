@@ -104,6 +104,22 @@ Integration: **import**.
 | `base_classes_external__ast` | file | count | int | 0– | invalid_input | Base classes named but not defined in the fragment. How much of the inheritance picture is outside what was measured. |
 | `operational_node_count__ast` | file | count | int | 0– | invalid_input | Nodes doing computational work: calls, assignments, subscripts, attribute access, conditional expressions, loops, conditionals, returns and comprehensions. Exists to distinguish 'no operators' from 'radon sees no operators'. |
 
+## `lexical`
+
+Integration: **import**.
+
+| Column | Granularity | Unit | Type | Range | Null means | Description |
+|---|---|---|---|---|---|---|
+| `distinct_tokens__lexical` | file | count | int | 0– | invalid_input | Different words the program is made of, counting every identifier, keyword, operator and literal. Halstead's vocabulary without his operator table. |
+| `lexical_tokens__lexical` | file | count | int | 0– | invalid_input | Total words in the program, layout excluded. Halstead's length, counted over every token rather than an arithmetic-only subset. |
+| `type_token_ratio__lexical` | file | ratio | float | 0–1 | invalid_input | Distinct words over total words: lexical diversity. Falls with length by construction, so compare it only between programs of similar size. |
+| `distinct_identifiers__lexical` | file | count | int | 0– | invalid_input | Different names the author chose, keywords excluded. The program's own vocabulary rather than the language's, and never zero on a non-empty program. |
+| `distinct_variables__lexical` | file | count | int | 0– | invalid_input | Different names bound by assignment, loop, comprehension or parameter. |
+| `distinct_functions_defined__lexical` | file | count | int | 0– | invalid_input | Different function names the program defines. |
+| `distinct_calls__lexical` | file | count | int | 0– | invalid_input | Different things the program calls, taking the last segment of a dotted call, so `s.count(...)` counts as `count`. |
+| `distinct_attributes__lexical` | file | count | int | 0– | invalid_input | Different attributes the program accesses. |
+| `distinct_imports__lexical` | file | count | int | 0– | invalid_input | Different modules and names the program imports. |
+
 ## `complexipy`
 
 Integration: **import**.

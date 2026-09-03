@@ -15,6 +15,7 @@ from ..contract import Adapter
 from .ast_adapter import AstAdapter
 from .bandit_adapter import BanditAdapter
 from .complexipy_adapter import ComplexipyAdapter
+from .lexical_adapter import LexicalAdapter
 from .lizard_adapter import LizardAdapter
 from .prospector_adapter import ProspectorAdapter
 from .pylint_adapter import PylintAdapter
@@ -27,6 +28,7 @@ DEFAULT_ADAPTERS: list[type[Adapter]] = [
     RadonAdapter,
     LizardAdapter,
     AstAdapter,
+    LexicalAdapter,
     ComplexipyAdapter,
     PyscnAdapter,
     VultureAdapter,
@@ -60,7 +62,8 @@ def build(names: list[str] | None = None, *, include_optional: bool = False) -> 
 
 
 __all__ = [
-    "Adapter", "AstAdapter", "BanditAdapter", "ComplexipyAdapter", "LizardAdapter",
+    "Adapter", "AstAdapter", "BanditAdapter", "ComplexipyAdapter", "LexicalAdapter",
+    "LizardAdapter",
     "ProspectorAdapter", "PylintAdapter", "PyscnAdapter", "RadonAdapter", "VultureAdapter",
     "DEFAULT_ADAPTERS", "OPTIONAL_ADAPTERS", "ALL_ADAPTERS", "build",
 ]

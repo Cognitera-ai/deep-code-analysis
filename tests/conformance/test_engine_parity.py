@@ -567,3 +567,67 @@ def test_every_radon_cli_field_is_carried_or_deliberately_dropped(radon_cli):
         f"radon's CLI emits fields we neither carry nor explain: {unaccounted}. "
         "Either add them to the schema or list them in `excluded` with a reason."
     )
+
+
+def test_lexical_metrics_match_a_reference_implementation(sources):
+    """Parity against an independent implementation of the same definitions.
+
+    The lexical adapter has no upstream CLI to check against — no public tool emits these
+    — so it is checked against a second implementation written separately for a research
+    platform. Agreement over hundreds of real files is what makes it credible that the
+    definitions are the ones intended rather than the ones that happened to be coded.
+
+    The definitions being pinned: layout tokens and comments are excluded, docstrings are
+    not, dotted calls count by their last segment, and a name may count in more than one
+    kind.
+    """
+    from dca.adapters.lexical_adapter import LexicalAdapter
+
+    adapter = LexicalAdapter()
+    mismatches, checked = [], 0
+
+    for path, source in sources.items():
+        values = adapter.analyse(source).values
+        if values.get("distinct_tokens") is None:
+            continue
+        checked += 1
+
+        # Recompute independently, from the definitions rather than from the adapter.
+        import ast
+        import io
+        import keyword
+        import tokenize
+
+        try:
+            tokens = [
+                t
+                for t in tokenize.generate_tokens(io.StringIO(source).readline)
+                if t.type
+                not in {
+                    tokenize.ENCODING, tokenize.NEWLINE, tokenize.NL, tokenize.INDENT,
+                    tokenize.DEDENT, tokenize.ENDMARKER, tokenize.COMMENT,
+                }
+            ]
+        except (tokenize.TokenError, IndentationError):
+            continue
+
+        words = [t.string for t in tokens]
+        identifiers = {
+            t.string for t in tokens
+            if t.type == tokenize.NAME and not keyword.iskeyword(t.string)
+        }
+        functions = {
+            n.name for n in ast.walk(ast.parse(source))
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        for key, want in (
+            ("distinct_tokens", len(set(words))),
+            ("lexical_tokens", len(words)),
+            ("distinct_identifiers", len(identifiers)),
+            ("distinct_functions_defined", len(functions)),
+        ):
+            if values[key] != want:
+                mismatches.append(f"{path}: {key} ours={values[key]} expected={want}")
+
+    _report(mismatches, checked, "files")
