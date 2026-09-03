@@ -314,7 +314,9 @@ def test_radon_cyclomatic_complexity_matches_hand_count(truth: Truth):
     from radon.complexity import ComplexityVisitor
 
     visitor = ComplexityVisitor.from_code(truth.code)
-    per_function = {b.name: b.complexity for b in visitor.blocks if b.name in truth.cc_per_function}
+    per_function = {
+        b.name: b.complexity for b in visitor.blocks if b.name in truth.cc_per_function
+    }
 
     for name, expected in truth.cc_per_function.items():
         assert per_function.get(name) == expected, f"{truth.name}: {name} — {truth.notes}"
@@ -326,7 +328,10 @@ def test_radon_cyclomatic_complexity_matches_hand_count(truth: Truth):
         assert values["cyclomatic_complexity_mean"] == truth.cc_module, truth.notes
 
 
-@pytest.mark.parametrize("truth", [t for t in TRUTHS if t.cc_per_function], ids=[t.name for t in TRUTHS if t.cc_per_function])
+WITH_FUNCTIONS = [t for t in TRUTHS if t.cc_per_function]
+
+
+@pytest.mark.parametrize("truth", WITH_FUNCTIONS, ids=[t.name for t in WITH_FUNCTIONS])
 def test_lizard_cyclomatic_complexity_matches_hand_count(truth: Truth):
     """A second, independent McCabe implementation against the same hand count.
 
@@ -337,7 +342,9 @@ def test_lizard_cyclomatic_complexity_matches_hand_count(truth: Truth):
     import lizard
 
     analysed = lizard.analyze_file.analyze_source_code("f.py", truth.code)
-    per_function = {f.name.split("::")[-1]: f.cyclomatic_complexity for f in analysed.function_list}
+    per_function = {
+        f.name.split("::")[-1]: f.cyclomatic_complexity for f in analysed.function_list
+    }
     for name, expected in truth.cc_per_function.items():
         assert per_function.get(name) == expected, f"{truth.name}: {name} — {truth.notes}"
 
@@ -358,7 +365,9 @@ def test_cognitive_complexity_matches_hand_derivation(name: str):
     truth = next(t for t in TRUTHS if t.name == name)
     adapter = ComplexipyAdapter()
     result = adapter.analyse(truth.code)
-    got = {f["name"].split("::")[-1]: f["cognitive_complexity"] for f in result.functions}
+    got = {
+        f["name"].split("::")[-1]: f["cognitive_complexity"] for f in result.functions
+    }
     for fn, expected in COGNITIVE[name].items():
         assert got.get(fn) == expected, f"{name}: {fn} — nesting increments per Sonar"
 
@@ -383,7 +392,8 @@ def test_halstead_operator_tables_are_documented():
     from radon.metrics import h_visit
 
     radon_total = h_visit(code).total
-    analysed = lizard.FileAnalyzer(lizard.get_extensions(["halstead"])).analyze_source_code("f.py", code)
+    analyzer = lizard.FileAnalyzer(lizard.get_extensions(["halstead"]))
+    analysed = analyzer.analyze_source_code("f.py", code)
     lizard_fn = analysed.function_list[0]
 
     # radon: only BinOp, UnaryOp, BoolOp, AugAssign, Compare. Here that is `>`, `+`, `-`.

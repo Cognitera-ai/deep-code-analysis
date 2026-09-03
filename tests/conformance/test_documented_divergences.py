@@ -36,7 +36,8 @@ def test_boolean_operators_are_branches_for_radon_and_lizard_but_not_pyscn():
     code = "def f(a, b, c):\n    if a or b or c:\n        return 1\n    return 0\n"
 
     radon_cc = ComplexityVisitor.from_code(code).blocks[0].complexity
-    lizard_cc = lizard.analyze_file.analyze_source_code("f.py", code).function_list[0].cyclomatic_complexity
+    analysed = lizard.analyze_file.analyze_source_code("f.py", code)
+    lizard_cc = analysed.function_list[0].cyclomatic_complexity
 
     assert radon_cc == 4          # 1 + if + or + or
     assert lizard_cc == 4         # independent tokeniser, same convention
@@ -119,10 +120,19 @@ def test_pyscn_lloc_is_a_different_quantity_from_radon_lloc():
     a hand count; pyscn's is closer to a non-blank source line count and equals its own
     SLOC most of the time. The schema keeps both under `lloc` with the engine suffix, so
     the disagreement is visible rather than silently resolved in either's favour."""
-    code = "x = 1\nfor i in range(3):\n    if i:\n        x += i\n    else:\n        x -= i\nprint(x)\n"
+    code = (
+        "x = 1\n"
+        "for i in range(3):\n"
+        "    if i:\n"
+        "        x += i\n"
+        "    else:\n"
+        "        x -= i\n"
+        "print(x)\n"
+    )
     result = Analyser(engines=["radon", "pyscn"]).analyse(code)
 
-    assert result.value("lloc", "radon") == 7    # x=, for, if, +=, else, -=, print — hand count
+    # Hand count: x=, for, if, +=, else, -=, print.
+    assert result.value("lloc", "radon") == 7
     assert result.value("lloc", "pyscn") is not None
     assert result.value("lloc", "pyscn") != result.value("lloc", "radon")
     assert result.metrics["lloc__divergent"] is True
