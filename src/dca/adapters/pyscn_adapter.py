@@ -345,12 +345,34 @@ class PyscnAdapter(Adapter):
         cbo = (report.get("cbo") or {}).get("summary") or {}
         lcom = (report.get("lcom") or {}).get("summary") or {}
 
-        functions_parsed = _num(csum.get("functions_parsed")) or 0
+        # Aggregate from the per-function list, not from pyscn's own summary. The summary
+        # counts the module body as a function named "<module>" (complexity 1, cognitive 0)
+        # and averages it in, so a file with one function of cognitive complexity 4 reports
+        # an average of 2. That is not a disagreement about the metric — pyscn and
+        # complexipy agree on every real function — it is a disagreement about what a
+        # "function" is, and it was masquerading as an 80 % divergence until diagnosed.
+        real = [
+            f for f in (complexity.get("functions") or [])
+            if isinstance(f, dict)
+            and f.get("name") != "<module>"
+            and f.get("scope_kind") != "module"
+        ]
+        ccs = [_num((f.get("metrics") or {}).get("complexity")) for f in real]
+        ccs = [c for c in ccs if c is not None]
+        cogs = [_num((f.get("metrics") or {}).get("cognitive_complexity")) for f in real]
+        cogs = [c for c in cogs if c is not None]
+        nests = [_num((f.get("metrics") or {}).get("nesting_depth")) for f in real]
+        nests = [n for n in nests if n is not None]
+
+        functions_parsed = len(real)
         classes_analyzed = (
             _num(lcom.get("classes_analyzed")) or _num(cbo.get("classes_analyzed")) or 0
         )
         has_functions = bool(functions_parsed)
         has_classes = bool(classes_analyzed)
+
+        def mean(xs):
+            return round(sum(xs) / len(xs), 4) if xs else None
 
         return {
             # Class-level metrics are null, not zero, when there are no classes (R-05).
@@ -359,21 +381,11 @@ class PyscnAdapter(Adapter):
             "lcom_mean": _num(lcom.get("average_lcom")) if has_classes else None,
             "lcom_max": _num(lcom.get("max_lcom")) if has_classes else None,
             "class_count": int(classes_analyzed),
-            "cognitive_complexity_mean": (
-                _num(csum.get("average_cognitive_complexity")) if has_functions else None
-            ),
-            "cyclomatic_complexity_mean": (
-                _num(csum.get("average_complexity")) if has_functions else None
-            ),
-            "cyclomatic_complexity_max": (
-                _num(csum.get("max_complexity")) if has_functions else None
-            ),
-            "nesting_depth_mean": (
-                _num(csum.get("average_nesting_depth")) if has_functions else None
-            ),
-            "nesting_depth_max": (
-                _num(csum.get("max_class_nesting_depth")) if has_functions else None
-            ),
+            "cognitive_complexity_mean": mean(cogs),
+            "cyclomatic_complexity_mean": mean(ccs),
+            "cyclomatic_complexity_max": max(ccs) if ccs else None,
+            "nesting_depth_mean": mean(nests),
+            "nesting_depth_max": max(nests) if nests else None,
             "clone_count": _num(clones.get("total_clones")),
             "clone_pairs": _num(clones.get("total_clone_pairs")),
             "clone_groups": _num(clones.get("total_clone_groups")),
